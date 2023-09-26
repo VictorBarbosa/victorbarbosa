@@ -182,5 +182,5 @@ Nota: Isso pode não funcionar em smartphones e/ou tablets; foi otimizado apenas
 
  
 <p>&nbsp;<img align="center" src="https://github-readme-stats.vercel.app/api?username=victorbarbosa&show_icons=true&locale=en" alt="victorbarbosa" /></p>
- <p><img align="center" src="https://github-readme-streak-stats.herokuapp.com/?user=victorbarbosa&" alt="victorbarbosa" /></p>
+ 
 
