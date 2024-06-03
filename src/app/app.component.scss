@@ -1,0 +1,19 @@
+.top-bar {
+  float: right;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+.top-bar::after {
+ 
+  content: "";
+  background: white;
+  position: absolute;
+  width: 100vw;
+  height: 1px;
+  
+}
+mat-drawer-content {
+  height: 100vh;
+}
