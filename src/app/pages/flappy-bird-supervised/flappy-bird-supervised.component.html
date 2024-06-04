@@ -1,2 +1,9 @@
-<p>flappy-bird-supervised works!</p>
-<app-tensorflow-visualization [inputs]="inputs" [labels]="labels" ></app-tensorflow-visualization>
+<div>
+  <app-tensorflow-visualization  ngi  *ngIf="model===null;"
+    [settings]="settings"
+    (modelTrainned)="modelTrainned($event)"
+  ></app-tensorflow-visualization>  
+ 
+  <canvas #canvas style="background: white; margin-top: 200px;" >  </canvas>
+ 
+</div>

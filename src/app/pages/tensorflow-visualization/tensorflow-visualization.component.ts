@@ -1,7 +1,10 @@
-import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import * as tfvis from '@tensorflow/tfjs-vis';
 import * as tf from '@tensorflow/tfjs'
-import { BehaviorSubject, combineLatest, distinctUntilChanged, shareReplay, tap } from 'rxjs';
+
+import { BehaviorSubject, distinctUntilChanged, shareReplay, tap } from 'rxjs';
+import { TensorflowSettings } from '../../common/tensorflow-settings';
+
 
 @Component({
   selector: 'app-tensorflow-visualization',
@@ -14,65 +17,56 @@ export class TensorflowVisSampleComponent {
 
   @ViewChild('vis', { static: true }) container!: ElementRef<HTMLDivElement>
 
+  @Output("modelTrainned") modelTrainned: EventEmitter<tf.Sequential> = new EventEmitter()
+
 
   /*
-   * inputs
+   * TensorflowSettings
    */
-  private readonly _inputs = new BehaviorSubject<number[][] | null>(null);
-  inputs$ = this._inputs.asObservable().pipe(distinctUntilChanged(), shareReplay({ bufferSize: 1, refCount: true }));
+  private readonly _tensorflowSettings = new BehaviorSubject<TensorflowSettings | null>(null);
+  settings$ = this._tensorflowSettings.asObservable().pipe(distinctUntilChanged(), shareReplay({ bufferSize: 1, refCount: true }));
 
   /*
-  * inputs getter
+  * TensorflowSettings getter
   */
-  get inputs(): number[][] | null {
-    return this._inputs.getValue();
+  get settings(): TensorflowSettings | null {
+    return this._tensorflowSettings.getValue();
   }
 
   /*
-   * inputs setter
+   * TensorflowSettings setter
    */
-  @Input() set inputs(value: number[][] | null) {
-    if (this._inputs.getValue() !== value) {
-      this._inputs.next(value);
+  @Input() set settings(value: TensorflowSettings | null) {
+    if (this._tensorflowSettings.getValue() !== value) {
+      this._tensorflowSettings.next(value);
     }
   }
-  /*
-   * Labels
-   */
-  private readonly _labels = new BehaviorSubject<number[] | null>(null);
-  labels$ = this._labels.asObservable().pipe(distinctUntilChanged(), shareReplay({ bufferSize: 1, refCount: true }));
-
-  /*
-  * Labels getter
-  */
-  get labels(): number[] | null {
-    return this._labels.getValue();
-  }
-
-  /*
-   * Labels setter
-   */
-  @Input() set labels(value: number[] | null) {
-    if (this._labels.getValue() !== value) {
-      this._labels.next(value);
-    }
-  }
-
-
 
   model!: tf.Sequential
 
   constructor() {
-    combineLatest([this.inputs$, this.labels$]).pipe(tap(async ([inputs, labels]: any) => {
-      if (this.container?.nativeElement && inputs && labels) {
-
+    this.settings$.pipe(tap(async (settings) => {
+      if (settings) {
+ 
+        const { inputs, labels, mainLayers, finalLayer } = settings;
         const inputTensor = tf.tensor2d(inputs, [inputs.length, 2], 'float32');
-        const labelTensor = tf.tensor1d(labels,);
+        const labelTensor = tf.tensor1d(labels);
 
         // Definir o modelo
         this.model = tf.sequential();
-        this.model.add(tf.layers.dense({ units: 10, activation: 'relu', inputShape: [2] }));
-        this.model.add(tf.layers.dense({ units: 2, activation: 'softmax' })); // 2 ações possíveis
+
+        /**
+         * Adding first and hidden layers
+         */
+        mainLayers.forEach(layer => this.model.add(layer));
+
+        /**
+         * Output layer
+         */
+        this.model.add(finalLayer);
+
+
+        this.model.compile(settings.compiler)
 
         this.model.compile({
           optimizer: tf.train.adam(),
@@ -80,31 +74,24 @@ export class TensorflowVisSampleComponent {
           metrics: ['accuracy']
         });
 
-
         const surface = { name: 'show.fitCallbacks', tab: 'Training', drawArea: this.container?.nativeElement };
-
-        debugger
 
         const trainingCompleteCallback = {
           onTrainEnd: () => {
             alert('Training complete!');
+            this.modelTrainned.emit(this.model)
           }
         };
 
-        // Train for 5 epochs with batch size of 32.
-        await this.model.fit(inputTensor, labelTensor, {
-          epochs: 25,
-          batchSize: 128,
+        const fit = {
+          ...settings.fit,
           callbacks: [tfvis.show.fitCallbacks(surface, ['loss', 'acc']), trainingCompleteCallback],
-        });
+        }
+ 
+        await this.model.fit(inputTensor, labelTensor, fit);
       }
-    })).subscribe()
+    })).subscribe();
   }
-
-  predict(xAgent: number, xTarget: number) {
-    // this.model.predict({})
-  }
-
 }
 
 
