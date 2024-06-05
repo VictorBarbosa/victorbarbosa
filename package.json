@@ -31,7 +31,6 @@
     "@tensorflow/tfjs": "^4.19.0",
     "@tensorflow/tfjs-vis": "^1.5.1",
     "@types/p5": "^1.7.0",
-    "@types/matter-js": "^0.19.6",
     "ionicons": "^7.2.1",
     "p5": "^1.8.0",
     "rxjs": "~7.8.0",

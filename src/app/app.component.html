@@ -1,9 +1,19 @@
 <mat-drawer-container class="example-container">
-  <mat-drawer #drawer [mode]="'over'">....</mat-drawer>
+  <mat-drawer  #drawer class="content-menu" [mode]="'over'">
+    <div
+    
+      *ngFor="let item of routes"
+      [routerLink]="item.path"
+      routerLinkActive="active-link"
+    >
+      {{ item.title }}
+  </div>
+  </mat-drawer>
+
   <mat-drawer-content>
     <div class="top-bar">
       <div class="title">Victor Barbosa</div>
-      <button
+      <button 
         mat-icon-button
         (click)="drawer.toggle()"
         aria-label="Example icon-button with a menu"

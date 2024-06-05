@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef, HostListener, OnInit } from '@angular/core';
-import { TensorflowVisSampleComponent } from '../tensorflow-visualization/tensorflow-visualization.component';
+
 import { CommonModule } from '@angular/common';
 import { TensorflowSettings } from '../../common/tensorflow-settings';
 import * as tf from '@tensorflow/tfjs';
@@ -10,6 +10,7 @@ import p5 from 'p5';
 import Background from './background';
 import Obstacle from './obstacle';
 import Bird from './bird';
+import { TensorflowVisSampleComponent } from '../../common/tensorflow-visualization/tensorflow-visualization.component';
 /** Enum for possible actions */
 enum Action {
   Nothing = 0,
@@ -166,13 +167,9 @@ export class FlappyBirdSupervisedComponent implements OnInit {
 
     const { agentY, targetY } = this.bird.info(this.obstacles);
 
-
-
-
     const inputs = tf.tensor([[agentY, targetY]]); // Cria um tensor com as entradas
 
     const prediction = this.model?.predict(inputs) as tf.Tensor;
-
 
     // Use tf.argMax para obter o índice da classe prevista
     const classIdTensor = tf.argMax(prediction, 1);
@@ -184,7 +181,7 @@ export class FlappyBirdSupervisedComponent implements OnInit {
     if (classPredicted === "JUMP") {
       this.bird.jump()
     }
- 
+
 
     p.textSize(20)
     p.text(`Score (Pipe counter): ${this.scorePipes}`, 10, 110)
@@ -206,15 +203,6 @@ export class FlappyBirdSupervisedComponent implements OnInit {
     }
   }
 
-
-
-  // @HostListener('window:keydown.space', ['$event'])
-  // handleSpace(event: KeyboardEvent) {
-  //   if (event.code === 'Space') {
-  //     Matter.Body.setVelocity(this.bird, { x: 0, y: -4 });
-  //   }
-  // }
-
   settingTensorflow() {
     /** Map data to inputs */
     this.inputs = this.data.map(d => [d.yAgent, d.yTarget]);
@@ -230,10 +218,11 @@ export class FlappyBirdSupervisedComponent implements OnInit {
         metrics: ['accuracy']
       },
 
+
       fit: { batchSize: 512, epochs: 10 },
       inputs: this.inputs,
       labels: this.labels,
-      mainLayers: [tf.layers.dense({ units: 10, activation: 'relu', inputShape: [2] })],
+      mainLayers: [tf.layers.dense({ units: 32, activation: 'relu', inputShape: [2] })],
       finalLayer: tf.layers.dense({ units: 2, activation: 'softmax' }),
     };
   }

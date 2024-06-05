@@ -1,5 +1,5 @@
 .top-bar {
-  .title{
+  .title {
     position: absolute;
     left: 10px;
     align-self: center;
@@ -14,14 +14,23 @@
   background: black;
 }
 .top-bar::after {
- 
   content: "";
   background: white;
   position: absolute;
   width: 100vw;
   height: 1px;
-  
 }
 mat-drawer-content {
   height: 100vh;
+}
+
+.content-title {
+  background: red;
+  cursor: pointer;
+}
+.page.active {
+  // background-color: yellow;
+}
+.active-link {
+  // background-color: yellow;
 }
