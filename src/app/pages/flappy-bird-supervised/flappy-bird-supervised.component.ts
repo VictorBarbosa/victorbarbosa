@@ -187,7 +187,7 @@ export class FlappyBirdSupervisedComponent implements OnInit {
  
 
     p.textSize(20)
-    p.text(`Score (Pipe count): ${this.scorePipes}`, 10, 110)
+    p.text(`Score (Pipe counter): ${this.scorePipes}`, 10, 110)
     this.background.drawGround();
 
   }
