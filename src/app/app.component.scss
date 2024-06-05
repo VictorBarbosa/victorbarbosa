@@ -1,4 +1,10 @@
 .top-bar {
+  .title{
+    position: absolute;
+    left: 10px;
+    align-self: center;
+    font-size: x-large;
+  }
   float: right;
   width: 100%;
   display: flex;
