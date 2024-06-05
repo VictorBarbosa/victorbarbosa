@@ -78,7 +78,7 @@ export class TensorflowVisSampleComponent {
 
         const trainingCompleteCallback = {
           onTrainEnd: () => {
-            alert('Training complete!');
+            alert('Trainning complete!');
             this.modelTrainned.emit(this.model)
           }
         };

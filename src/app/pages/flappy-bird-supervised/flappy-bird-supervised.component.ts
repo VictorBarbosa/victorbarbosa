@@ -77,6 +77,8 @@ export class FlappyBirdSupervisedComponent implements OnInit {
   birdX: number = 0; // Variável para armazenar a coordenada X da ave
 
 
+  scorePipes = 0
+
   p!: p5;
 
 
@@ -156,7 +158,7 @@ export class FlappyBirdSupervisedComponent implements OnInit {
     this.obstacles.forEach(obs => {
       obs.draw();
       if (obs.isOffscreen(this.obstacles)) {
-        // this.scorePipes += 1
+        this.scorePipes += 1
       }
     });
 
@@ -170,7 +172,7 @@ export class FlappyBirdSupervisedComponent implements OnInit {
     const inputs = tf.tensor([[agentY, targetY]]); // Cria um tensor com as entradas
 
     const prediction = this.model?.predict(inputs) as tf.Tensor;
- 
+
 
     // Use tf.argMax para obter o índice da classe prevista
     const classIdTensor = tf.argMax(prediction, 1);
@@ -182,26 +184,10 @@ export class FlappyBirdSupervisedComponent implements OnInit {
     if (classPredicted === "JUMP") {
       this.bird.jump()
     }
-    // const population = this.ga.population.filter(pop => pop.isAlive);
-    // if (population.length > 0) {
+ 
 
-    //   population.forEach(pop => {
-    //     pop.update(this.obstacles);
-    //     pop.hits(this.obstacles);
-    //     pop.isOffScreen();
-    //     pop.think(this.obstacles)
-    //   });
-    // } else {
-    //   this.ga.generateNextGeneration(0.2, this.ga.population);
-    //   this.initObstacles(p, this.upPipe, this.downPipe);
-    //   this.scorePipes = 0
-    // }
-
-
-    // p.textSize(20)
-    // p.text(`Still Alive : ${this.totalPopulation}`, 10, 50)
-    // p.text(`Generation: ${this.currentGeneration}`, 10, 80)
-    // p.text(`Score (Pipe count): ${this.scorePipes}`, 10, 110)
+    p.textSize(20)
+    p.text(`Score (Pipe count): ${this.scorePipes}`, 10, 110)
     this.background.drawGround();
 
   }
