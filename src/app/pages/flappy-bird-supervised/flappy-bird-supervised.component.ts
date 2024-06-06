@@ -219,7 +219,7 @@ export class FlappyBirdSupervisedComponent implements OnInit {
       },
 
 
-      fit: { batchSize: 512, epochs: 10 },
+      fit: { batchSize: 512, epochs: 5 },
       inputs: this.inputs,
       labels: this.labels,
       mainLayers: [tf.layers.dense({ units: 32, activation: 'relu', inputShape: [2] })],
