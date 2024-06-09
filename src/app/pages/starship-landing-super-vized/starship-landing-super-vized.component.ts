@@ -115,7 +115,7 @@ export class StarShipLandingSuperVizedComponent implements ITensorflowSettings, 
 
   constructor() {
 
-    tf.loadLayersModel("/assets/model/startship_landing_model.json").then(model => {
+    tf.loadLayersModel("assets/model/startship_landing_model.json").then(model => {
 
       if (model) {
 
