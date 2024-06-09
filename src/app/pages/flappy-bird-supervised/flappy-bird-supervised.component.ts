@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, HostListener, OnInit } from '@angular/core';
+import { Component, ViewChild, ElementRef, OnInit } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 import { TensorflowSettings } from '../../common/tensorflow-settings';
@@ -11,6 +11,7 @@ import Background from './background';
 import Obstacle from './obstacle';
 import Bird from './bird';
 import { TensorflowVisSampleComponent } from '../../common/tensorflow-visualization/tensorflow-visualization.component';
+import { ITensorflowSettings } from '../../common/itensorflow-settings';
 /** Enum for possible actions */
 enum Action {
   Nothing = 0,
@@ -32,7 +33,7 @@ interface Data {
   templateUrl: './flappy-bird-supervised.component.html',
   styleUrls: ['./flappy-bird-supervised.component.scss']
 })
-export class FlappyBirdSupervisedComponent implements OnInit {
+export class FlappyBirdSupervisedComponent implements OnInit, ITensorflowSettings {
   /** Screen height */
   readonly screenYSize: number = window.innerHeight;
 
@@ -118,7 +119,7 @@ export class FlappyBirdSupervisedComponent implements OnInit {
     const json = this.creatingDataToTraining();
     this.settingTensorflow();
   }
-
+ 
   ngOnInit(): void {
     this.canvas
     this._model.subscribe((m) => {

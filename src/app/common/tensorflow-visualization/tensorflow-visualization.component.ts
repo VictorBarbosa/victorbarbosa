@@ -28,7 +28,7 @@ export class TensorflowVisSampleComponent implements AfterViewInit, OnDestroy {
 
   model!: tf.Sequential;
 
-  constructor() {}
+  constructor() { }
 
   ngAfterViewInit(): void {
     this._tensorflowSettings.pipe(
@@ -42,10 +42,20 @@ export class TensorflowVisSampleComponent implements AfterViewInit, OnDestroy {
 
   async initializeModel(settings: TensorflowSettings) {
     await tf.ready();
-
+ 
     const { inputs, labels, mainLayers, finalLayer } = settings;
-    const inputTensor = tf.tensor2d(inputs, [inputs.length, 2], 'float32');
-    const labelTensor = tf.tensor1d(labels);
+    
+    // Dividir os dados em treinamento e teste
+    const splitIndex = Math.floor(inputs.length * 0.9);
+    const trainInputs = inputs.slice(0, splitIndex);
+    const testInputs = inputs.slice(splitIndex);
+    const trainLabels = labels.slice(0, splitIndex);
+    const testLabels = labels.slice(splitIndex);
+
+    const inputTensor = tf.tensor(trainInputs);
+    const testInputTensor = tf.tensor(testInputs);
+    const labelTensor = tf.tensor(trainLabels);
+    const testLabelTensor = tf.tensor(testLabels);
 
     // Definir o modelo
     this.model = tf.sequential();
@@ -69,6 +79,7 @@ export class TensorflowVisSampleComponent implements AfterViewInit, OnDestroy {
     await tf.tidy(() => {
       this.model.fit(inputTensor, labelTensor, {
         ...settings.fit,
+        validationData: [testInputTensor, testLabelTensor], // Adicionando dados de validação
         callbacks: [tfvis.show.fitCallbacks(surface, ['loss', 'acc']), trainingCompleteCallback],
       });
     });
