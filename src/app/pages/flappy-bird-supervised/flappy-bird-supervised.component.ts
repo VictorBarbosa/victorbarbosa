@@ -33,44 +33,14 @@ interface Data {
   templateUrl: './flappy-bird-supervised.component.html',
   styleUrls: ['./flappy-bird-supervised.component.scss']
 })
-export class FlappyBirdSupervisedComponent implements OnInit, ITensorflowSettings {
+export class FlappyBirdSupervisedComponent extends ITensorflowSettings implements OnInit {
+  override createData(): void { }
+
   /** Screen height */
   readonly screenYSize: number = window.innerHeight;
 
   /** Array to hold training data */
   data: Data[] = [];
-
-  /** Input data for the model */
-  inputs: number[][] = [];
-
-  /** Labels for the model */
-  labels: number[] = [];
-
-  /** TensorFlow settings */
-  settings!: TensorflowSettings;
-
-
-  /*
-   * Model
-   */
-  private readonly _model = new BehaviorSubject<tf.Sequential | null>(null);
-  model$ = this._model.asObservable().pipe(distinctUntilChanged(), shareReplay({ bufferSize: 1, refCount: true }));
-
-  /*
-  * Model getter
-  */
-  get model(): tf.Sequential | null {
-    return this._model.getValue();
-  }
-
-  /*
-   * Model setter
-   */
-  set model(value: tf.Sequential | null) {
-    if (this._model.getValue() !== value) {
-      this._model.next(value);
-    }
-  }
 
   /** Accessing the canvas element */
   @ViewChild('canvas', { static: true }) canvas!: ElementRef<HTMLCanvasElement>;
@@ -104,25 +74,16 @@ export class FlappyBirdSupervisedComponent implements OnInit, ITensorflowSetting
    */
   obstacles: Obstacle[] = [];
 
-  /**
-   * Canvas width size
-   */
-  width = window.innerWidth;
-
-  /**
-   * Canvas height size
-   */
-  height = window.innerHeight;
-
   bird!: Bird;
   constructor() {
+    super()
     const json = this.creatingDataToTraining();
     this.settingTensorflow();
   }
- 
+
   ngOnInit(): void {
     this.canvas
-    this._model.subscribe((m) => {
+    this.model$.subscribe((m) => {
 
       if (m) {
         this.p = new p5(this.sketch.bind(this))
@@ -132,6 +93,7 @@ export class FlappyBirdSupervisedComponent implements OnInit, ITensorflowSetting
   }
 
 
+  override setScenario(): void { }
 
   sketch(p: p5) {
     p.setup = () => this.setup(p);

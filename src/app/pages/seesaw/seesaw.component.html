@@ -1,0 +1,15 @@
+<div>
+    <app-tensorflow-visualization
+      *ngIf="!model"
+      [settings]="settings"
+      (modelTrainned)="modelTrainned($event)"
+    ></app-tensorflow-visualization>
+    <canvas
+      #canvas
+      [width]="0"
+      height="0"
+      style="background: white; margin-top: 200px"
+    >
+    </canvas>
+  </div>
+  

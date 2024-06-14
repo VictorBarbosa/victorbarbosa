@@ -39,35 +39,21 @@ interface Data {
   templateUrl: './starship-landing-super-vized.component.html',
   styleUrl: './starship-landing-super-vized.component.scss'
 })
-export class StarShipLandingSuperVizedComponent implements ITensorflowSettings, AfterViewInit {
-  /** TensorFlow settings */
-  settings!: TensorflowSettings;
-
-  /** Array to hold training data */
-  data: Data[] = [];
-
-  /** Input data for the model */
-  inputs: number[][] = [];
-
-  /** Labels for the model */
-  labels: number[] = [];
+export class StarShipLandingSuperVizedComponent extends ITensorflowSettings implements AfterViewInit {
+  override createData(): void {
+    throw new Error('Method not implemented.');
+  }
 
   /** Accessing the canvas element */
   @ViewChild('canvas', { static: true }) canvas!: ElementRef<HTMLCanvasElement>;
 
-  //
-  width = window.innerWidth;
 
-  //
-  height = window.innerHeight;
+  /** TensorFlow settings */
 
-  Engine = Matter.Engine;
-  Render = Matter.Render;
-  Runner = Matter.Runner;
-  Bodies = Matter.Bodies;
-  Composite = Matter.Composite;
-  engine!: Matter.Engine;
-  render!: Matter.Render;
+
+  /** Array to hold training data */
+  data: Data[] = [];
+
   starShip!: Matter.Body;
   maxSpeedCollision = 0;
   landingPlatform!: Matter.Body;
@@ -91,30 +77,12 @@ export class StarShipLandingSuperVizedComponent implements ITensorflowSettings, 
     return parseInt(this.landingPlatform.position.x.toPrecision(3))
   };
 
-  /*
-   * Model
-   */
-  private readonly _model = new BehaviorSubject<tf.Sequential | tf.LayersModel | null>(null);
-  model$ = this._model.asObservable().pipe(distinctUntilChanged(), shareReplay({ bufferSize: 1, refCount: true }));
-
-  /*
-  * Model getter
-  */
-  get model(): tf.Sequential | tf.LayersModel | null {
-    return this._model.getValue();
-  }
-
-  /*
-   * Model setter
-   */
-  set model(value: tf.Sequential | tf.LayersModel | null) {
-    if (this._model.getValue() !== value) {
-      this._model.next(value);
-    }
-  }
 
   constructor() {
+    super()
 
+  }
+  override setScenario(): void {
     tf.loadLayersModel("assets/model/startship_landing_model.json").then(model => {
 
       if (model) {
@@ -134,6 +102,7 @@ export class StarShipLandingSuperVizedComponent implements ITensorflowSettings, 
       }
     })).subscribe()
   }
+
   ngAfterViewInit(): void {
     // this.draw()
   }
