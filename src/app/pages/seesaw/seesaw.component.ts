@@ -98,8 +98,8 @@ export class SeesawComponent extends ITensorflowSettings implements AfterViewIni
     const group = this.Body.nextGroup(true);
 
     const scale = 0.8;
-    this.car = new Car((window.innerWidth / 2), this.canvas.nativeElement.height - 350, 150 * scale, 30 * scale, 30 * scale)
-    const catapult = this.Bodies.rectangle(window.innerWidth / 2, this.canvas.nativeElement.height - 200, window.innerWidth, 20, { render: { fillStyle: 'red' }, collisionFilter: { group: group }, });
+    this.car = new Car((window.innerWidth / 2) - 50, this.canvas.nativeElement.height - 350, 150 * scale, 30 * scale, 30 * scale)
+    const catapult = this.Bodies.rectangle(window.innerWidth / 2, this.canvas.nativeElement.height - 150, window.innerWidth, 20, { render: { fillStyle: 'red' }, collisionFilter: { group: group }, });
 
     this.Composite.add(this.world, [
       this.car.carComposite,
