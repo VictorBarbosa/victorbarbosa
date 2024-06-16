@@ -1,16 +1,12 @@
 import { AfterViewInit, Component, ElementRef, ViewChild } from '@angular/core';
 import { ITensorflowSettings } from '../../common/itensorflow-settings';
 import Matter from 'matter-js';
-import Car from './car';
+import Car, { Direction } from './car';
 import * as tf from '@tensorflow/tfjs';
 import { TensorflowVisSampleComponent } from '../../common/tensorflow-visualization/tensorflow-visualization.component';
 import { CommonModule } from '@angular/common';
-import { radiansToDegrees } from '../../common/common'
-enum Direction {
-  left = 0,
-  right = 1,
-  nothing = 2
-}
+
+
 interface Data {
   wheelBY: number,
   wheelAY: number,
@@ -24,17 +20,22 @@ interface Data {
   styleUrl: './seesaw.component.scss'
 })
 export class SeesawComponent extends ITensorflowSettings implements AfterViewInit {
-  ngAfterViewInit(): void {
-    this.setScenario();
-  }
-
 
   /** Accessing the canvas element */
   @ViewChild('canvas', { static: true }) canvas!: ElementRef<HTMLCanvasElement>;
 
+  cars: Car[] = [];
 
-  car!: Car;
   data: Data[] = []
+
+  constructor() {
+    super()
+  }
+
+  ngAfterViewInit(): void {
+    this.setScenario();
+  }
+
   override settingTensorflow(): void {
 
 
@@ -98,11 +99,20 @@ export class SeesawComponent extends ITensorflowSettings implements AfterViewIni
     const group = this.Body.nextGroup(true);
 
     const scale = 0.8;
-    this.car = new Car((window.innerWidth / 2) - 50, this.canvas.nativeElement.height - 350, 150 * scale, 30 * scale, 30 * scale)
+
+    for (let car = 0; car < 5; car++) {
+
+      const initialX = Math.round(Math.random() * window.innerWidth);
+      const initialY = Math.round(Math.random() * (window.innerHeight / 2));
+      this.cars.push(new Car(initialX, initialY, 150 * scale, 30 * scale, 30 * scale, this.model, `Car-${car}}`));
+    }
+
+
     const catapult = this.Bodies.rectangle(window.innerWidth / 2, this.canvas.nativeElement.height - 150, window.innerWidth, 20, { render: { fillStyle: 'red' }, collisionFilter: { group: group }, });
 
     this.Composite.add(this.world, [
-      this.car.carComposite,
+      ... this.cars.map(c => c.carComposite),
+
       // stack,
       catapult,
 
@@ -136,23 +146,7 @@ export class SeesawComponent extends ITensorflowSettings implements AfterViewIni
     // keep the mouse in sync with rendering
     this.render.mouse = mouse;
     this.beforeUpdate(() => {
-      const prediction = this.model?.predict(tf.tensor([[this.car.wheelA.position.y, this.car.wheelB.position.y,]])) as tf.Tensor;
-
-
-      // Use tf.argMax para obter o índice da classe prevista
-      const classIdTensor = tf.argMax(prediction, 1);
-      const classIdArray = classIdTensor.arraySync() as any;
-      const classId = classIdArray[0]; // Como temos apenas uma amostra, pegamos o primeiro valor
-
-      switch (classId) {
-        case Direction.left: this.car.goLeft(); break;
-        case Direction.right: this.car.goRight(); break;
-
-        default:
-          break;
-      }
-      console.log(`***Direction*** ${Direction[classId]} Angle ${this.car.angle}`,)
-
+      this.cars.forEach(c => c.action())
     })
   }
 

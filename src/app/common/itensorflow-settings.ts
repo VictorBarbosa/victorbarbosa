@@ -63,16 +63,19 @@ export abstract class ITensorflowSettings {
         }
     }
 
-    constructor() {
+    constructor(modelTrainned?: tf.Sequential | tf.LayersModel | null) {
         this.engine = this.Engine.create();
         this.world = this.engine.world;
         this.createData();
-        this.settingTensorflow()
+        this.settingTensorflow();
+        if (modelTrainned) {
+            this.model = modelTrainned
+        }
     }
 
     abstract createData(): void
     abstract setScenario(): void
-  
+
 }
 
 
