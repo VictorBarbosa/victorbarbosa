@@ -59,6 +59,7 @@ export class SeesawComponent extends ITensorflowSettings implements AfterViewIni
       labels: this.labels,
       mainLayers: [
         tf.layers.dense({ units: 64, activation: 'relu', inputShape: [2] }),
+        tf.layers.dense({ units: 128, activation: 'relu', }),
 
       ],
       finalLayer: tf.layers.dense({ units: 3, activation: 'softmax' }),
@@ -97,20 +98,17 @@ export class SeesawComponent extends ITensorflowSettings implements AfterViewIni
     const group = this.Body.nextGroup(true);
 
     const scale = 0.8;
-    this.car = new Car((window.innerWidth / 2), this.canvas.nativeElement.height - 250, 150 * scale, 30 * scale, 30 * scale)
-    const catapult = this.Bodies.rectangle(window.innerWidth / 2, this.canvas.nativeElement.height - 200, window.innerWidth / 2, 20, { render: { fillStyle: 'red' }, collisionFilter: { group: group }, });
-
-    //  this. car = this.car((window.innerWidth / 2) - 150, 100, 150 * scale, 30 * scale, 30 * scale);
+    this.car = new Car((window.innerWidth / 2), this.canvas.nativeElement.height - 350, 150 * scale, 30 * scale, 30 * scale)
+    const catapult = this.Bodies.rectangle(window.innerWidth / 2, this.canvas.nativeElement.height - 200, window.innerWidth, 20, { render: { fillStyle: 'red' }, collisionFilter: { group: group }, });
 
     this.Composite.add(this.world, [
       this.car.carComposite,
       // stack,
       catapult,
-      this.Bodies.rectangle(window.innerWidth / 2, this.canvas.nativeElement.height, window.innerWidth, 20.5, { isStatic: true, render: { fillStyle: 'white' } }),
 
-      // this.Bodies.circle(560, 100, 50, { density: 0.005, position: { x: 100, y: 0 } }),
-      // this.Bodies.circle(560, 100, 50, { density: 0.005 }),
-      // see car function defined later in this file
+      this.Bodies.rectangle(100, this.canvas.nativeElement.height, 20, 20.5, { isStatic: true, render: { fillStyle: 'white' } }),
+      this.Bodies.rectangle(window.innerWidth - 100, this.canvas.nativeElement.height, 20, 20.5, { isStatic: true, render: { fillStyle: 'white' } }),
+
 
 
       this.Constraint.create({
@@ -153,7 +151,7 @@ export class SeesawComponent extends ITensorflowSettings implements AfterViewIni
         default:
           break;
       }
-      console.log("***Direction***", Direction[classId])
+      console.log(`***Direction*** ${Direction[classId]} Angle ${this.car.angle}`,)
 
     })
   }
@@ -167,20 +165,17 @@ export class SeesawComponent extends ITensorflowSettings implements AfterViewIni
   override  createData() {
     this.data = []
 
-
-
-
-    let dataA = [];
-    let dataB = [];
-    let dataC = [];
+    const dataA = [];
+    const dataB = [];
+    const dataC = [];
 
     // Loop through wheelA and wheelB
     for (let wheelA = -180; wheelA < 180; wheelA++) {
       for (let wheelB = -180; wheelB < 180; wheelB++) {
         if (wheelA > wheelB) {
-          dataA.push({ action: 1, wheelAY: wheelA, wheelBY: wheelB });
+          dataA.push({ action: Direction.right, wheelAY: wheelA, wheelBY: wheelB });
         } else if (wheelA < wheelB) {
-          dataB.push({ action: 0, wheelAY: wheelA, wheelBY: wheelB });
+          dataB.push({ action: Direction.left, wheelAY: wheelA, wheelBY: wheelB });
         }
       }
     }
@@ -200,30 +195,6 @@ export class SeesawComponent extends ITensorflowSettings implements AfterViewIni
 
 
     this.data = data
-
-
-
-    // for (let wheelA = -180; wheelA < 180; wheelA++) {
-    //   for (let wheelB = -180; wheelB < 180; wheelB++) {
-
-    //     // if ((wheelA > -5 && wheelA < 5) && (wheelB > -5 && wheelB < 5)) {
-    //     //   this.data.push({ action: Direction.nothing, wheelAY: wheelA, wheelBY: wheelB })
-    //     // }
-    //     // else 
-    //     if (wheelA > wheelB) {
-    //       this.data.push({ action: Direction.left, wheelAY: wheelA, wheelBY: wheelB })
-    //     }
-    //     else if (wheelA < wheelB) {
-    //       this.data.push({ action: Direction.right, wheelAY: wheelA, wheelBY: wheelB })
-    //     }
-    //     else {
-    //       this.data.push({ action: Direction.nothing, wheelAY: wheelA, wheelBY: wheelB })
-    //     }
-
-    //   }
-
-    // }
-
   }
 
   /** Callback when the model is trained */

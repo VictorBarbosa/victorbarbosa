@@ -34,7 +34,7 @@ interface Data {
   styleUrls: ['./flappy-bird-supervised.component.scss']
 })
 export class FlappyBirdSupervisedComponent extends ITensorflowSettings implements OnInit {
-  override createData(): void { }
+
 
   /** Screen height */
   readonly screenYSize: number = window.innerHeight;
@@ -77,9 +77,14 @@ export class FlappyBirdSupervisedComponent extends ITensorflowSettings implement
   bird!: Bird;
   constructor() {
     super()
-    const json = this.creatingDataToTraining();
-    this.settingTensorflow();
+
+
   }
+  override createData(): void {
+    debugger
+    const json = this.creatingDataToTraining();
+  }
+
 
   ngOnInit(): void {
     this.canvas
@@ -167,6 +172,7 @@ export class FlappyBirdSupervisedComponent extends ITensorflowSettings implement
   }
 
   settingTensorflow() {
+    debugger
     /** Map data to inputs */
     this.inputs = this.data.map(d => [d.yAgent, d.yTarget]);
 
@@ -192,8 +198,9 @@ export class FlappyBirdSupervisedComponent extends ITensorflowSettings implement
 
   /** Function to create training data */
   creatingDataToTraining() {
-    for (let target = 0; target < this.screenYSize; target += 5) {
-      for (let agent = 0; agent < this.screenYSize; agent += 5) {
+    this.data = []
+    for (let target = 0; target < window.innerHeight; target += 5) {
+      for (let agent = 0; agent < window.innerHeight; agent += 5) {
         if (agent < target) {
           this.data.push({ yAgent: agent, yTarget: target, action: Action.Nothing });
         } else {

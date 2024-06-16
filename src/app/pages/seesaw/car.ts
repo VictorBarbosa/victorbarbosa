@@ -12,7 +12,7 @@ export default class Car extends ITensorflowSettings {
     wheelB: Matter.Body;
 
     get angle(): number {
-        return this.body.angle;
+        return radiansToDegrees(this.body.angle);
     }
     get wheelAPosition(): Matter.Vector {
         return this.wheelA.position;
@@ -88,7 +88,7 @@ export default class Car extends ITensorflowSettings {
         this.carComposite = car;
     }
     goRight() {
-        const forceMagnitude = 0.0010; // Adjust the force magnitude as needed
+        const forceMagnitude = 0.0007; // Adjust the force magnitude as needed
         const angle = this.body.angle;
         const forceX = forceMagnitude * Math.cos(angle);
         const forceY = forceMagnitude * Math.sin(angle);
@@ -99,7 +99,7 @@ export default class Car extends ITensorflowSettings {
     }
 
     goLeft() {
-        const forceMagnitude = -0.0010; // Adjust the force magnitude as needed
+        const forceMagnitude = -0.0007; // Adjust the force magnitude as needed
         const angle = this.body.angle;
         const forceX = forceMagnitude * Math.cos(angle);
         const forceY = forceMagnitude * Math.sin(angle);
