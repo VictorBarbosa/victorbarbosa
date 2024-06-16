@@ -1,36 +1,30 @@
 import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
-import { TensorflowSettings } from '../../common/tensorflow-settings';
 import * as tf from '@tensorflow/tfjs';
 import { TensorflowVisSampleComponent } from '../../common/tensorflow-visualization/tensorflow-visualization.component';
 import { CommonModule } from '@angular/common';
 import { ITensorflowSettings } from '../../common/itensorflow-settings';
 import Matter, { Body, Mouse, MouseConstraint, Vector, World } from 'matter-js';
-import { BehaviorSubject, distinctUntilChanged, shareReplay, tap } from 'rxjs';
-import { degreesToRadians, radiansToDegrees } from '../../common/common';
-
-
+import { degreesToRadians, drawLine, radiansToDegrees } from '../../common/common';
+import * as tfvis from '@tensorflow/tfjs-vis';
+interface State {
+  angle: number;
+  angularVelocity: number;
+  positionX: number;
+  positionY: number;
+  velocityX: number;
+  velocityY: number;
+}
 
 /** Enum for possible actions */
 enum Action {
-  NoRotate = 0,
-  LeftRotate = 1,
-  RightRotate = 2,
-  // Thrust = 3,
-  // Nothing = 4
+  LeftRotate,
+  RightRotate,
+  MainThrust,
+  LeftThrust,
+  RightThrust,
+  Nothing,
 }
 
-interface Position {
-  x: number
-  y: number
-  angle: number
-}
-/** Interface for data structure */
-interface Data {
-  // yTarget: Position,
-  Agent: Position,
-  action: Action;
-
-}
 
 @Component({
   selector: 'app-star-ship-landing-super-vized',
@@ -40,144 +34,121 @@ interface Data {
   styleUrl: './starship-landing-super-vized.component.scss'
 })
 export class StarShipLandingSuperVizedComponent extends ITensorflowSettings implements AfterViewInit {
-  override createData(): void {
-    throw new Error('Method not implemented.');
-  }
 
   /** Accessing the canvas element */
   @ViewChild('canvas', { static: true }) canvas!: ElementRef<HTMLCanvasElement>;
 
-
   /** TensorFlow settings */
 
-
-  /** Array to hold training data */
-  data: Data[] = [];
-
+  lineTargetX: number = 0;
+  lineTargetY: number = 0;
   starShip!: Matter.Body;
+
   maxSpeedCollision = 0;
   landingPlatform!: Matter.Body;
-  lauchingPlatform!: Matter.Body;
 
   get starShipAngle(): number {
     return this.starShip.angle;
   }
   get starShipX(): number {
-    return parseInt(this.starShip.position.x.toPrecision(3))
+    return parseInt(this.starShip.position.x.toPrecision(3));
   }
   get starShipY(): number {
-    return parseInt(this.starShip.position.y.toPrecision(3))
+    return parseInt(this.starShip.position.y.toPrecision(3));
   }
 
   get landingPlatformY(): number {
-    return parseInt(this.landingPlatform.position.y.toPrecision(3))
+    return parseInt(this.landingPlatform.position.y.toPrecision(3));
   };
 
   get landingPlatformX(): number {
-    return parseInt(this.landingPlatform.position.x.toPrecision(3))
+    return parseInt(this.landingPlatform.position.x.toPrecision(3));
   };
 
-
-  constructor() {
-    super()
-
+  private getState(): State {
+    return {
+      angle: this.starShip.angle,
+      angularVelocity: this.starShip.angularVelocity,
+      positionX: this.starShip.position.x,
+      positionY: this.starShip.position.y,
+      velocityX: this.starShip.velocity.x,
+      velocityY: this.starShip.velocity.y,
+    };
   }
-  override setScenario(): void {
-    tf.loadLayersModel("assets/model/startship_landing_model.json").then(model => {
+  private iteration: number = 0;
+  modelStarship!: tf.Sequential
+  constructor() { super(); }
+  createData(): void { }
+  setScenario(): void { }
+  settingTensorflow() {
+    this.initModel()
+  }
+  private initModel(): void {
+    this.modelStarship = tf.sequential();
+    this.modelStarship.add(tf.layers.dense({ units: 64, inputShape: [6], activation: 'relu' }));
+    this.modelStarship.add(tf.layers.dense({ units: 256, activation: 'relu' }));
+    this.modelStarship.add(tf.layers.dense({ units: 6, activation: 'softmax' })); // 6 saídas para as ações
 
-      if (model) {
-
-        this._model.next(model)
-      } else {
-        this.dataBuilder()
-        this.settingTensorflow();
-      }
-    })
-
-    this.model$.pipe(tap(model => {
-      if (model) {
-
-
-        this.draw()
-      }
-    })).subscribe()
+    this.modelStarship.compile({ optimizer: tf.train.adam(0.001), loss: 'categoricalCrossentropy' });
   }
 
   ngAfterViewInit(): void {
-    // this.draw()
+    this.draw();
+
+    // this.setupLossChart();
   }
 
-  dataBuilder() {
-    for (let angle = -180; angle < 180; angle++) {
-      for (let x = 0; x < this.width / 10; x++) {
-        for (let y = 0; y < this.height / 10; y++) {
-          if (angle < 5) {
-            this.data.push({ Agent: { angle, x, y }, action: Action.RightRotate })
-          } else if (angle > 5) {
-            this.data.push({ Agent: { angle, x, y }, action: Action.LeftRotate })
-          }
-          this.data.push({ Agent: { angle: 0, x: 0, y: 0 }, action: Action.NoRotate })
-        }
-      }
-    }
-  }
+  private setupLossChart(): void {
+    const surface = tfvis.visor().surface({ name: 'Loss', tab: 'Charts' });
 
-  settingTensorflow() {
-
-    // Mapear os dados para entradas e rótulos
-    this.inputs = [];
-    this.labels = [];
-
-    this.data.forEach(d => {
-      this.inputs.push([d.Agent.angle]);
-      this.labels.push(Number(d.action));
+    // Configure a line chart on the surface
+    const lossContainer = { name: 'Loss', tab: 'Charts' };
+    const chart = tfvis.render.linechart(lossContainer, { values: [] }, {
+      xLabel: 'Iteration',
+      yLabel: 'Loss',
+      width: 400,
+      height: 300,
     });
 
-
-    /** TensorFlow settings */
-    this.settings = {
-      compiler: {
-        optimizer: tf.train.adam(),
-        loss: 'sparseCategoricalCrossentropy', // Use sparseCategoricalCrossentropy for multi-class classification
-        metrics: ['accuracy']
-      },
-
-      fit: { batchSize: 10000, epochs: 3 },
-      inputs: this.inputs,
-      labels: this.labels,
-      mainLayers: [
-        tf.layers.dense({ units: 64, activation: 'relu', inputShape: [1] }),
-      ],
-      finalLayer: tf.layers.dense({ units: 3, activation: 'softmax' }),
-    };
-
+    // surface.drawArea.appendChild(chart);
   }
-
+  private updateLossChart(iteration: number, lossValue: number): void {
+    const series = { values: [{ x: iteration, y: lossValue }] };
+    const container = { name: 'Loss', tab: 'Charts' };
+    tfvis.render.linechart(container, series);
+  }
   draw() {
-    // module aliases
 
     // create an engine
     this.engine = this.Engine.create({ gravity: { scale: 0.001, x: 0, y: 0.1 } });
 
-    // create a renderer
+    // create renderer
     this.render = this.Render.create({
       canvas: this.canvas.nativeElement,
       engine: this.engine,
       options: {
+        width: window.innerWidth - 10,
+        height: window.innerHeight - 10,
+        // showAngleIndicator: true,
+        // showCollisions: true,
+        showVelocity: true,
         showDebug: true,
         wireframes: false
       }
     });
 
     // create two boxes and a ground
-    this.starShip = this.addStarship()
+    this.starShip = this.addStarship();
 
-    this.lauchingPlatform = this.addLauchingPlatform()
-    this.landingPlatform = this.addLandingPlatform()
+    this.landingPlatform = this.addLandingPlatform();
 
     // const collision =  Matter.Collision.collides()
     // add all of the bodies to the world
-    this.Composite.add(this.engine.world, [this.starShip, this.lauchingPlatform, this.landingPlatform]);
+    this.Composite.add(this.engine.world, [this.starShip, this.landingPlatform,
+    this.Bodies.rectangle(window.innerWidth - 105, this.height - 35, 2, 20, { render: { fillStyle: 'red' } }),
+    this.Bodies.rectangle(window.innerWidth - 45, this.height - 35, 2, 20, { render: { fillStyle: 'yellow' } }),
+
+    ]);
     // Criar um objeto mouse
     const mouse = Mouse.create(this.render.canvas);
     const mouseConstraint = MouseConstraint.create(this.engine, {
@@ -195,68 +166,21 @@ export class StarShipLandingSuperVizedComponent extends ITensorflowSettings impl
 
     // run the renderer
     this.Render.run(this.render);
-
     // create runner
     const runner = this.Runner.create();
     // run the engine
     this.Runner.run(runner, this.engine);
 
     this.afterUpdate(() => {
-      const degree = radiansToDegrees(this.starShipAngle);
-      // Matter.Collision.create(this.starShip,this.lauchingPlatform)
-      const isOnGround = Matter.Collision.collides(this.starShip, this.lauchingPlatform)
+      drawLine(this.render.context, this.starShipX, this.starShipY, this.lineTargetX, this.lineTargetY);
 
-
-      if (this.model && !isOnGround) {
-
-        const inputs = tf.tensor([degree]); // Cria um tensor com as entradas
-        // debugger
-        const prediction = this.model?.predict(inputs) as tf.Tensor;
-
-        // Use tf.argMax para obter o índice da classe prevista
-        const classIdTensor = tf.argMax(prediction, 1);
-        const classIdArray = classIdTensor.arraySync() as any;
-        const classId = classIdArray[0]; // Como temos apenas uma amostra, pegamos o primeiro valor
-
-        const classes = ["RightRotate", "LeftRotate", "Thrust", "Nothing", "NoRotate"];
-
-        console.log("******", Action[classId])
-
-
-        switch (Action[classId]) {
-          case "RightRotate": this.rotateRight(); break;
-          case "LeftRotate": this.rotateLeft(); break;
-
-          default:
-            break;
-        }
-        // if (this.maxSpeedCollision < this.starShip.speed) {
-        //   this.maxSpeedCollision = this.starShip.speed
-
-        // }
-        // console.log("Distance :", this.calculateDistance())
-        // console.log("angle :", this.starShip.angle)
-        // console.log("maxSpeedCollision :", this.maxSpeedCollision)
-
-        if (this.starShipY > 500) {
-          // this.starShip.position.y -= 1
-
-          // this.starShip.force.y -= 0.01
-          // this.starShip.angle += 0.01
-          // this.applyThrust(this.starShip, 0.0005)
-        }
-        // else if (this.starShipY > 500 && this.starShipX < 500) {
-        //   this.starShip.angle = 50
-        //   this.applyThrust(this.starShip, 0.009)
-        // }
-
-      }
-    })
+      this.updateEnvironment();
+    });
   }
-  addStarship(): Matter.Body {
 
-    const body = this.Bodies.rectangle(100, 90, 12, 25, {
-      angle: degreesToRadians(45),
+  addStarship(): Matter.Body {
+    const body = this.Bodies.rectangle((window.innerWidth / 2) + 300, 500, 12, 25, {
+      angle: degreesToRadians(0),
       render: {
         sprite: {
           texture: 'assets/starship.png', // Replace with the path to your image
@@ -266,7 +190,7 @@ export class StarShipLandingSuperVizedComponent extends ITensorflowSettings impl
       }
     });
 
-    return body
+    return body;
   }
 
   rotateLeft() {
@@ -276,8 +200,7 @@ export class StarShipLandingSuperVizedComponent extends ITensorflowSettings impl
     this.starShip.angle += 0.01;
   }
 
-  applyThrust(body: Body, forceMagnitude: number) {
-
+  applyMainThruster(body: Body, forceMagnitude: number) {
     const angle = body.angle;
     const force = {
       x: Math.sin(angle) * forceMagnitude,
@@ -286,25 +209,25 @@ export class StarShipLandingSuperVizedComponent extends ITensorflowSettings impl
     Body.applyForce(body, { x: body.position.x, y: body.position.y }, force);
   }
 
-
-
   addLauchingPlatform() {
     return this.Bodies.rectangle(0, this.height - 50, 600, 60, { isStatic: true, render: { fillStyle: 'white' } });
   }
 
   addLandingPlatform() {
-    return this.Bodies.rectangle(780, this.height - 50, 100, 60, { isStatic: true, render: { fillStyle: 'white' } });
+    this.lineTargetX = window.innerWidth - 75;
+    this.lineTargetY = this.height - 20;
+    return this.Bodies.rectangle(window.innerWidth - 75, this.height - 20, 150, 10, { isStatic: true, render: { fillStyle: 'white' } });
   }
 
   beforeUpdate(callback: Function) {
     Matter.Events.on(this.engine, 'beforeUpdate', (cb: any) => {
-      callback(cb)
+      callback(cb);
     });
   }
 
   afterUpdate(callback: Function) {
     Matter.Events.on(this.engine, 'afterUpdate', (cb: any) => {
-      callback(cb)
+      callback(cb);
     });
   }
 
@@ -315,8 +238,148 @@ export class StarShipLandingSuperVizedComponent extends ITensorflowSettings impl
     return result < 5 ? 0 : result;
   }
 
-  /** Callback when the model is trained */
-  modelTrainned(model: tf.Sequential) {
-    this.model = model;
+  calculateReward(state: State) {
+
+    let reward = 0;
+
+    const distanceToTarget = Math.sqrt((state.positionX - this.lineTargetX) ** 2 + (state.positionY - this.lineTargetY) ** 2);
+    reward -= distanceToTarget;
+
+    // const speed = Math.sqrt(state.velocityX ** 2 + state.velocityY ** 2);
+    // reward -= speed;
+
+    // const angleError = Math.abs(state.angle);
+    // reward -= angleError;
+
+    // if (distanceToTarget < 1 && speed < 0.1 && angleError < 0.1) {
+    //   reward += 1000;
+    // }
+
+
+    if (distanceToTarget < 1) {
+      reward += 1000;
+    }
+
+    return reward;
+  }
+
+  private checkIfLanded(state: State): boolean {
+    if (state.positionX < 0 || state.positionX > window.innerWidth || state.positionY < 0 || state.positionY > window.innerHeight) {
+      return true;
+    }
+
+    const distanceToTarget = Math.sqrt((state.positionX - this.lineTargetX) ** 2 + (state.positionY - this.lineTargetY) ** 2);
+    const speed = Math.sqrt(state.velocityX ** 2 + state.velocityY ** 2);
+    const angleError = Math.abs(state.angle);
+
+    return distanceToTarget < 1 && speed < 0.1 && angleError < 0.1;
+  }
+
+  resetEnvironment() {
+    // Reiniciar a posição da nave e outras configurações do ambiente
+    Body.setPosition(this.starShip, { x: (window.innerWidth / 2) + 300, y: 500 });
+    Body.setVelocity(this.starShip, { x: 0, y: 0 });
+    Body.setAngle(this.starShip, 0);
+    Body.setAngularVelocity(this.starShip, 0);
+  }
+
+  applyAction(action: Action) {
+    switch (action) {
+      // case Action.LeftRotate:
+      //   this.rotateLeft();
+      //   break;
+      // case Action.RightRotate:
+      //   this.rotateRight();
+      //   break;
+      case Action.MainThrust:
+        this.applyMainThruster(this.starShip, 0.0005);
+        break;
+      case Action.LeftThrust:
+        Body.applyForce(this.starShip, { x: this.starShip.position.x, y: this.starShip.position.y }, { x: -0.01, y: 0 });
+        break;
+      case Action.RightThrust:
+        Body.applyForce(this.starShip, { x: this.starShip.position.x, y: this.starShip.position.y }, { x: 0.01, y: 0 });
+        break;
+      case Action.Nothing:
+      default:
+        // Nenhuma ação
+        break;
+    }
+  }
+
+  updateEnvironment() {
+    // // Atualizar a física do Matter.js
+    // Matter.Engine.update(this.engine);
+
+    // Calcular o novo estado
+    const state = this.getState();
+
+    // Selecionar a próxima ação usando o modelo PPO
+    const action = this.selectAction(state);
+
+    // Aplicar a ação ao ambiente
+    this.applyAction(action);
+
+    // Calcular a recompensa
+    const reward = this.calculateReward(state);
+    console.log("reward", reward)
+    // Atualizar o modelo PPO
+    this.updatePPO(state, action, reward, this.iteration);
+
+    // Verificar condições de término do episódio
+    if (this.checkIfLanded(state)) {
+      // this.iteration++;
+      this.resetEnvironment();
+    }
+  }
+
+  // const numberOfActions = Object.keys(Action).filter((key: any) => !isNaN(Number(Action[key]))).length;
+
+  private updatePPO(state: State, action: Action, reward: number, iteration: number): void {
+    const currentStateTensor = tf.tensor([[state.angle, state.angularVelocity, state.positionX, state.positionY, state.velocityX, state.velocityY]]);
+    const optimizer = tf.train.adam(0.001);
+
+    optimizer.minimize((): any => {
+      const actionProbabilities = this.modelStarship.predict(currentStateTensor) as tf.Tensor;
+      const advantage = tf.scalar(reward);
+      const logits = this.modelStarship.apply(currentStateTensor) as tf.Tensor;
+      const actionLogProbs = tf.logSoftmax(logits).gather([action], 1);
+
+      const ratio = tf.exp(actionLogProbs).div(actionProbabilities);
+      const minAdv = tf.mul(ratio, advantage);
+      const maxAdv = tf.mul(tf.clipByValue(ratio, 1 - 0.2, 1 + 0.2), advantage);
+      const clipped = tf.minimum(minAdv, maxAdv);
+      const loss = tf.mul(clipped, -1).mean();
+
+
+      // // Update loss chart
+      // this.updateLossChart(iteration, loss as any);
+
+      tf.dispose(currentStateTensor);
+      tf.dispose(actionProbabilities);
+      tf.dispose(logits);
+      tf.dispose(actionLogProbs);
+
+
+
+      return loss;
+    });
+  }
+
+  private selectAction(state: State): Action {
+    const currentStateTensor = tf.tensor([[state.angle, state.angularVelocity, state.positionX, state.positionY, state.velocityX, state.velocityY]]);
+    const actionProbabilities = this.modelStarship.predict(currentStateTensor) as tf.Tensor;
+
+    const actionIndex = actionProbabilities.argMax(1).dataSync()[0];
+    tf.dispose(currentStateTensor);
+    tf.dispose(actionProbabilities);
+
+    return actionIndex as Action;
+  }
+
+
+  /** Callback when the modelStarship is trained */
+  modelTrainned(modelStarship: tf.Sequential) {
+    this.modelStarship = modelStarship;
   }
 }
