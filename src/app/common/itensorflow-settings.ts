@@ -1,9 +1,9 @@
 
 import * as tf from '@tensorflow/tfjs';
 import { TensorflowSettings } from "./tensorflow-settings";
-import Matter from "matter-js";
 import { BehaviorSubject, distinctUntilChanged, shareReplay } from "rxjs";
-export abstract class ITensorflowSettings {
+import Main from './main';
+export abstract class ITensorflowSettings extends Main {
     /** Input data for the model */
     inputs: number[][] = [];
 
@@ -14,33 +14,7 @@ export abstract class ITensorflowSettings {
     settings!: TensorflowSettings;
 
     abstract settingTensorflow(): void;
-
-    //
-    width: number = window.innerWidth;
-
-    //
-    height: number = window.innerHeight;
-
-
-    Engine = Matter.Engine;
-    Render = Matter.Render;
-    Runner = Matter.Runner;
-    Bodies = Matter.Bodies;
-    Composite = Matter.Composite;
-
-    Composites = Matter.Composites;
-    Constraint = Matter.Constraint;
-    MouseConstraint = Matter.MouseConstraint;
-    Mouse = Matter.Mouse;
-    Body = Matter.Body;
-    Vector = Matter.Vector;
-    engine!: Matter.Engine;
-    render!: Matter.Render;
-
-    // create engine
-    world!: Matter.World
-
-
+ 
     /*
 * Model
 */
@@ -64,8 +38,7 @@ export abstract class ITensorflowSettings {
     }
 
     constructor(modelTrainned?: tf.Sequential | tf.LayersModel | null) {
-        this.engine = this.Engine.create();
-        this.world = this.engine.world;
+        super();
         this.createData();
         this.settingTensorflow();
         if (modelTrainned) {

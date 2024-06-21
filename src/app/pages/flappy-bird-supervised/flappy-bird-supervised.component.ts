@@ -1,11 +1,7 @@
 import { Component, ViewChild, ElementRef, OnInit } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
-import { TensorflowSettings } from '../../common/tensorflow-settings';
 import * as tf from '@tensorflow/tfjs';
-
-
-import { BehaviorSubject, distinctUntilChanged, shareReplay } from 'rxjs';
 import p5 from 'p5';
 import Background from './background';
 import Obstacle from './obstacle';

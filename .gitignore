@@ -42,3 +42,5 @@ testem.log
 Thumbs.db
 
 logs
+src/assets/data.pkl
+src/assets/logs
