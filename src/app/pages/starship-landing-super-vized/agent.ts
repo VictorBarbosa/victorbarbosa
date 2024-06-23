@@ -5,12 +5,9 @@ import Main from "../../common/main";
 import { Scenario } from "./scenario";
 interface State {
     angle: number;
-    angularVelocity: number;
-    positionX: number;
-    positionY: number;
-    velocityX: number;
-    velocityY: number;
-    fuel: number
+    agentX: number;
+    targetX: number
+
 }
 
 /** Enum for possible actions */
@@ -81,12 +78,9 @@ export default class Agent extends Main {
     getStateF(): State {
         return {
             angle: this.angle,
-            angularVelocity: this.angularVelocity,
-            positionX: this.agentBody.position.x,
-            positionY: this.agentBody.position.y,
-            velocityX: this.agentBody.velocity.x,
-            velocityY: this.agentBody.velocity.y,
-            fuel: this.fuel
+            agentX: this.agentX,
+            targetX: this.targetX
+
         };
     }
     getState(): number[] {
@@ -140,7 +134,8 @@ export default class Agent extends Main {
     }
 
     private addStarship(): Matter.Body {
-        return this.Bodies.rectangle(this.x, this.y, 22, 25, {
+        return this.Bodies.rectangle(this.x / 2, this.y, 22, 25, {
+            angle: degreesToRadians(45),
             isStatic: false,
             collisionFilter: {
                 // category: this.category,
@@ -172,28 +167,43 @@ export default class Agent extends Main {
         return { _state: this.getState(), reward: this.score, terminade: this.done }
     }
 
+    /**
+     * # Action
+# 0 Nothing
+# 1 Go Left 
+# 2 Go Right
+# 3 RoteteLeft
+# 4 RotateRight
+# 5 TurnOnEngine
+     * @param action 
+     */
     private applyAction(action: number) {
-        switch (Action[action]) {
-            case Action[0]: break;//Nothing;
-            case Action[1]://LeftThrust
-                this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: -0.0001, y: 0 });
-                break;
-            case Action[2]://MainThrust
-                this.applyMainThruster(this.agentBody, 0.0005);
-                break;
-            case Action[3]://RightThrust
-                this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: 0.0001, y: 0 });
-                break;
-            // case Action[0]: //LeftRotate
-            //     this.rotateLeft();
-            //     break;
-            // case Action[1]://RightRotate
-            //     this.rotateRight();
-            //     break;
-            default:
-                // Nenhuma ação
-                break;
+
+        switch (action) {
+       /* 0 Nothing      */case 0: break;
+       /* 1 Go Left      */ case 1: this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: -0.0001, y: 0 }); break;
+       /* 2 Go Right     */ case 2: this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: 0.0001, y: 0 }); break;
+       /* 3 RoteteLeft   */case 3: this.rotateLeft(); break;
+       /* 4 RotateRight  */ case 4: this.rotateRight(); break;
+       /* 5 TurnOnEngine */  case 5: this.applyMainThruster(this.agentBody, 0.0005); break;
+
+
         }
+        // switch (Action[action]) {
+        //     case Action[0]: break;//Nothing;
+        //     case Action[1]://LeftThrust
+        //         this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: -0.0001, y: 0 });
+        //         break;
+        //     case Action[2]://MainThrust
+        //         this.applyMainThruster(this.agentBody, 0.0005);
+        //         break;
+        //     case Action[3]://RightThrust
+        //         this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: 0.0001, y: 0 });
+        //         break;
+        //     default:
+        //         // Nenhuma ação
+        //         break;
+        // }
     }
 
     private applyMainThruster(body: Matter.Body, forceMagnitude: number) {
@@ -228,7 +238,7 @@ export default class Agent extends Main {
 
     calculateReward(state: State, targetX: number, targety: number) {
         let reward = 0;
-        const distanceToTarget = Math.sqrt((state.positionX - targetX) ** 2 + (state.positionY - targety) ** 2);
+        const distanceToTarget = Math.sqrt((state.agentX - targetX) ** 2 + (this.agentY - targety) ** 2);
         reward -= distanceToTarget;
         // const speed = Math.sqrt(state.velocityX ** 2 + state.velocityY ** 2);
         // reward -= speed;

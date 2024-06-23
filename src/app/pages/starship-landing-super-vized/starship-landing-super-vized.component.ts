@@ -13,6 +13,7 @@ import p5 from 'p5';
 import { radiansToDegrees } from "../../common/common";
 import Main from '../../common/main';
 import { explore } from '../../algorithms/ARS/explorer';
+import * as tf from '@tensorflow/tfjs'
 @Component({
   selector: 'app-star-ship-landing-super-vized',
   standalone: true,
@@ -40,7 +41,13 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
   hp!: HyperParameters
   normalizer!: Normalizer;
   bestReward = 0;
+
+  model!: tf.GraphModel<string | tf.io.IOHandler>
   ngAfterViewInit(): void {
+
+    tf.loadGraphModel('/assets/web_model/model.json').then(model => {
+      this.model = model;
+    })
     // this.draw();
     new p5(this.sketch.bind(this));
   }
@@ -54,7 +61,7 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
     p.createCanvas(this.width - 5, this.height - 5, this.canvas.nativeElement);
 
     // Ajustar a taxa de quadros para 5 fps
-    p.frameRate(20);
+    p.frameRate(5);
     const img = p.loadImage('assets/starship.png');
     // Criação do motor de física
     this.engine = this.Engine.create();
@@ -79,7 +86,7 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
   draw(p: p5): void {
     p.background(51);
 
-    debugger
+
     // Atualização do motor de física
     this.Engine.update(this.engine);
 
@@ -117,10 +124,23 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
     // }
 
 
+    if (this.model) {
+
+      const { angle, agentX, targetX } = this.agent.getStateF();
+      const input = tf.tensor([targetX, agentX, angle]).reshape([1, 3]); // Reshape to include batch dimension
+
+      // Make predictions
+      const prediction = this.model.predict(input) as tf.Tensor;;
+      const action = (tf.argMax(prediction, 1) as any).arraySync()[0];
+      this.agent.step(action)
+ 
+    }
+
 
     // drawBody(p, this.ground)
     this.scenario.update();
     this.agent.update();
+
 
 
   }
