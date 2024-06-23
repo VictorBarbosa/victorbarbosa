@@ -45,7 +45,7 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
   model!: tf.GraphModel<string | tf.io.IOHandler>
   ngAfterViewInit(): void {
 
-    tf.loadGraphModel('/assets/web_model/model.json').then(model => {
+    tf.loadGraphModel('/assets/models/web_model/model.json').then(model => {
       this.model = model;
     })
     // this.draw();

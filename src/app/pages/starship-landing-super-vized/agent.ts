@@ -135,7 +135,7 @@ export default class Agent extends Main {
 
     private addStarship(): Matter.Body {
         return this.Bodies.rectangle(this.x / 2, this.y, 22, 25, {
-            angle: degreesToRadians(0),
+            angle: degreesToRadians(30),
             isStatic: false,
             collisionFilter: {
                 // category: this.category,
