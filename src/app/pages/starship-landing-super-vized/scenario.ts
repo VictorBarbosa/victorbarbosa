@@ -31,7 +31,7 @@ export class Scenario extends Main {
     constructor(private p: p5, engine: Matter.Engine, canvas: HTMLCanvasElement) {
         super();
         this.engine = engine;
-                // create an engine
+        // create an engine
         // this.engine = this.Engine.create({
         //     enableSleeping: true,
         //     gravity: { scale: 0.001, x: 0, y: 0.1 }
@@ -67,7 +67,8 @@ export class Scenario extends Main {
     }
 
     private addLandingPlatform() {
-        this.lineTargetX = window.innerWidth / 2;
+        // this.lineTargetX = window.innerWidth / 2;
+        this.lineTargetX = window.innerWidth / 1.5;
         this.lineTargetY = this.height - 20;
         return this.Bodies.rectangle(this.lineTargetX, this.lineTargetY, 75, 10, {
             collisionFilter: {

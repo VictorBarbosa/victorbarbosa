@@ -14,6 +14,7 @@ import { radiansToDegrees } from "../../common/common";
 import Main from '../../common/main';
 import { explore } from '../../algorithms/ARS/explorer';
 import * as tf from '@tensorflow/tfjs'
+import { BehaviorSubject, combineLatest, distinctUntilChanged, shareReplay, tap } from 'rxjs';
 @Component({
   selector: 'app-star-ship-landing-super-vized',
   standalone: true,
@@ -42,14 +43,60 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
   normalizer!: Normalizer;
   bestReward = 0;
 
-  model!: tf.GraphModel<string | tf.io.IOHandler>
+  // modelAngle!: 
+
+  /*
+   * ModelAngle
+   */
+  private readonly _modelAngle = new BehaviorSubject<tf.GraphModel<string | tf.io.IOHandler> | null>(null);
+  modelAngle$ = this._modelAngle.asObservable().pipe(distinctUntilChanged(), shareReplay({ bufferSize: 1, refCount: true }));
+  get modelAngle(): tf.GraphModel<string | tf.io.IOHandler> | null {
+    return this._modelAngle.getValue()
+  }
+
+  /*
+   * HorizontalDirection
+   */
+  private readonly _horizontalDirection = new BehaviorSubject<tf.GraphModel<string | tf.io.IOHandler> | null>(null);
+  horizontalDirection$ = this._horizontalDirection.asObservable().pipe(distinctUntilChanged(), shareReplay({ bufferSize: 1, refCount: true }));
+
+  /*
+  * HorizontalDirection getter
+  */
+  get horizontalDirection(): tf.GraphModel<string | tf.io.IOHandler> | null {
+    return this._horizontalDirection.getValue();
+  }
+
+
+
+  /*
+   * VerticalDirection
+   */
+  private readonly _verticalDirection = new BehaviorSubject<tf.GraphModel<string | tf.io.IOHandler> | null>(null);
+  verticalDirection$ = this._verticalDirection.asObservable().pipe(distinctUntilChanged(), shareReplay({ bufferSize: 1, refCount: true }));
+
+  /*
+  * VerticalDirection getter
+  */
+  get verticalDirection(): tf.GraphModel<string | tf.io.IOHandler> | null {
+    return this._verticalDirection.getValue();
+  }
+
+
+
   ngAfterViewInit(): void {
 
-    tf.loadGraphModel('/assets/models/web_model/model.json').then(model => {
-      this.model = model;
-    })
-    // this.draw();
-    new p5(this.sketch.bind(this));
+    tf.loadGraphModel('assets/models/tf/angle/web_model/model.json').then(model => this._modelAngle.next(model));
+    tf.loadGraphModel('assets/models/tf/horizontal_direction_datas/web_model/model.json').then(model => this._horizontalDirection.next(model));
+    tf.loadGraphModel('assets/models/tf/vertical_direction_datas/web_model/model.json').then(model => this._verticalDirection.next(model));
+    combineLatest([this.modelAngle$, this.horizontalDirection$, this.verticalDirection$]).pipe(tap(([modelAngle, horizontal, vertical]) => {
+      if (modelAngle && horizontal && vertical) {
+
+        new p5(this.sketch.bind(this));
+      }
+    })).subscribe();
+    // // this.draw();
+
   }
 
   sketch(p: p5) {
@@ -61,10 +108,16 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
     p.createCanvas(this.width - 5, this.height - 5, this.canvas.nativeElement);
 
     // Ajustar a taxa de quadros para 5 fps
-    p.frameRate(5);
+    p.frameRate(20);
     const img = p.loadImage('assets/starship.png');
     // Criação do motor de física
-    this.engine = this.Engine.create();
+    this.engine = this.Engine.create({
+      gravity: {
+        x: 0,
+        y: 1.625 / 9.8, // Lunar gravity is approximately 1.625 m/s²
+        scale: 0.001
+      }
+    });
     this.world = this.engine.world;
 
 
@@ -73,7 +126,12 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
     // this.boxB = this.Bodies.rectangle(400, 200, 80, 80);
 
     this.scenario = new Scenario(p, this.engine, this.canvas.nativeElement);
-    this.agent = new Agent(p, this.scenario, img, (window.innerWidth / 2), 100);
+
+    this.agent = new Agent(p, this.scenario, img, (window.innerWidth / 2), 100, {
+      angle: this.modelAngle,
+      horizontal: this.horizontalDirection,
+      vertical: this.verticalDirection
+    });
     this.agent.setTargetPosition(this.scenario.landingPlatformX, this.scenario.landingPlatformY)
     this.Composite.add(this.engine.world, [this.agent.agentBody]);
 
@@ -90,58 +148,11 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
     // Atualização do motor de física
     this.Engine.update(this.engine);
 
-    // const deltas = this.policy.sampleDeltas();
-
-
-    // let positiveRewards = new Array(this.hp.nbDirections).fill(0);
-    // let negativeRewards = new Array(this.hp.nbDirections).fill(0);
-
-    // for (let k = 0; k < this.hp.nbDirections; k++) {
-    //   positiveRewards[k] = explore(this.agent, this.normalizer, this.policy, this.hp, 'positive', deltas[k]);
-    // }
-
-    // for (let k = 0; k < this.hp.nbDirections; k++) {
-    //   negativeRewards[k] = explore(this.agent, this.normalizer, this.policy, this.hp, 'negative', deltas[k]);
-    // }
-
-    // let allRewards = positiveRewards.concat(negativeRewards);
-    // let sigmaR = standardDeviation(allRewards);
-    // sigmaR =(sigmaR !== 0 ? sigmaR : 0.001)
-    // let scores: { [key: number]: number } = {};
-    // positiveRewards.forEach((r, k) => scores[k] = Math.max(r, negativeRewards[k]));
-    // let order = Object.keys(scores).map(Number).sort((a, b) => scores[b] - scores[a]).slice(0, this.hp.nbBestDirections);
-    // let rollouts = order.map(k => [positiveRewards[k], negativeRewards[k], deltas[k]] as [number, number, number[][]]);
-
-    // this.policy.update(rollouts, sigmaR);
-
-    // let rewardEvaluation = explore(this.agent, this.normalizer, this.policy, this.hp,);
-
-
-    // if (rewardEvaluation > this.bestReward) {
-    //   this.bestReward = rewardEvaluation;
-
-    //   console.log(`Best policy updated at step   with reward ${this.bestReward}`);
-    // }
-
-
-    if (this.model) {
-
-      const { angle, agentX, targetX } = this.agent.getStateF();
-      const input = tf.tensor([targetX, agentX, angle]).reshape([1, 3]); // Reshape to include batch dimension
-
-      // Make predictions
-      const prediction = this.model.predict(input) as tf.Tensor;;
-      const action = (tf.argMax(prediction, 1) as any).arraySync()[0];
-      this.agent.step(action)
- 
-    }
-
-
     // drawBody(p, this.ground)
     this.scenario.update();
     this.agent.update();
 
-
+    this.agent.action()
 
   }
 

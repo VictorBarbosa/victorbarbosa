@@ -1,8 +1,27 @@
 import Matter from "matter-js";
-import { degreesToRadians, drawBody, drawLine, radiansToDegrees } from "../../common/common";
+import { DEG2RAD, degreesToRadians, drawBody, drawLine, radiansToDegrees } from "../../common/common";
 import p5 from "p5";
 import Main from "../../common/main";
 import { Scenario } from "./scenario";
+import * as tf from '@tensorflow/tfjs'
+
+export enum SensorType {
+    TunedOn = 1,
+    TurnedOff = 0
+}
+export interface Sensor {
+    x: number;
+    y: number;
+    sensorType?: SensorType
+}
+
+
+interface TrainnedModel {
+    angle: tf.GraphModel<string | tf.io.IOHandler> | null;
+    horizontal: tf.GraphModel<string | tf.io.IOHandler> | null;
+    vertical: tf.GraphModel<string | tf.io.IOHandler> | null;
+}
+
 interface State {
     angle: number;
     agentX: number;
@@ -10,15 +29,28 @@ interface State {
 
 }
 
-/** Enum for possible actions */
-enum Action {
+enum AngleAction {
     Nothing = 0,
-    LeftThrust = 1,
-    MainThrust = 2,
-    RightThrust = 3,
-    // LeftRotate = 4,
-    // RightRotate = 5,
+    LeftRotate = 1,
+    RightRotate = 2
 }
+enum HorizontalAction {
+    Left = 0,
+    Right = 1,
+}
+enum VerticalAction {
+    Nothing = 0,
+    TurnOnEnging = 1,
+}
+/** Enum for possible actions */
+// enum Action {
+//     Nothing = 0,
+//     LeftThrust = 1,
+//     MainThrust = 2,
+//     RightThrust = 3,
+//     // LeftRotate = 4,
+//     // RightRotate = 5,
+// }
 
 export default class Agent extends Main {
     done: boolean = false;
@@ -29,9 +61,10 @@ export default class Agent extends Main {
     targetX: number = 0;
     targetY: number = 0;
     fuel = this.maxFuel;
-
+    private engineBurn = false
     readonly actionSpace = 4;
     readonly observationSpace = 7
+    sensors: Sensor[] = []
     public get percentFuel(): number {
         return parseFloat((this.fuel / this.maxFuel * 100).toFixed(2));
     }
@@ -73,7 +106,8 @@ export default class Agent extends Main {
     }
 
     get totalActions() {
-        return Object.keys(Action).length / 2;
+        // return Object.keys(Action).length / 2;
+        return -1;
     }
     getStateF(): State {
         return {
@@ -98,34 +132,12 @@ export default class Agent extends Main {
             // this.fuel
         ]
     }
-    constructor(private p: p5, private scenario: Scenario, private img: p5.Image, private x: number, private y: number) {
+    constructor(private p: p5, private scenario: Scenario, private img: p5.Image, private x: number, private y: number, private model: TrainnedModel) {
         super()
         this.agentBody = this.addStarship();
     }
 
-    update() {
-        this.p.push();
-        this.p.stroke('red')
-        this.p.line(this.agentX, this.agentY, this.targetX, this.targetY);
-        this.p.pop();
-        drawBody(this.p, this.agentBody);
-        drawBody(this.p, this.agentBody, this.img);
-        this.p.push();
 
-
-        this.p.push();
-        this.p.fill('white')
-
-
-
-        this.p.text(`Fuel ${this.percentFuel}% `, this.agentX + 10, this.agentY - 10)
-        this.p.text(`Distance ${this.distance} `, this.agentX + 10, this.agentY)
-        this.p.text(`Angle ${this.angle} `, this.agentX + 10, this.agentY + 10)
-        this.p.text(`Velocity ${this.speed} `, this.agentX + 10, this.agentY + 20)
-        this.p.pop();
-
-        this.checkIsAlive();
-    }
 
 
     setTargetPosition(landingPlatformX: number, landingPlatformY: number) {
@@ -135,8 +147,8 @@ export default class Agent extends Main {
 
     private addStarship(): Matter.Body {
         return this.Bodies.rectangle(this.x / 2, this.y, 22, 25, {
-            angle: degreesToRadians(30),
-            isStatic: false,
+            angle: degreesToRadians(0),
+            isStatic: true,
             collisionFilter: {
                 // category: this.category,
                 // mask: ~this.category,
@@ -151,10 +163,17 @@ export default class Agent extends Main {
         });
     }
     private rotateLeft() {
-        this.agentBody.angle -= 0.001;
+        this.agentBody.angle -= 0.009;
     }
     private rotateRight() {
-        this.agentBody.angle += 0.001;
+        this.agentBody.angle += 0.009;
+    }
+
+    private goLeft() {
+        this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: -0.0001, y: 0 });
+    }
+    private goRight() {
+        this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: 0.0001, y: 0 });
     }
     resetEnvironment() {
         this.Body.setPosition(this.agentBody, { x: this.x, y: this.y });
@@ -207,12 +226,14 @@ export default class Agent extends Main {
     }
 
     private applyMainThruster(body: Matter.Body, forceMagnitude: number) {
+        this.engineBurn = true;
         const angle = body.angle;
         const force = {
             x: Math.sin(angle) * forceMagnitude,
             y: -Math.cos(angle) * forceMagnitude
         };
         this.Body.applyForce(body, { x: body.position.x, y: body.position.y }, force);
+
     }
 
     checkIsAlive() {
@@ -227,6 +248,7 @@ export default class Agent extends Main {
     }
 
     step(action: number) {
+
         this.fuel -= 1;
         this.applyAction(action);
         this.score = this.calculateReward(this.getStateF(), this.targetX, this.targetY);
@@ -235,6 +257,115 @@ export default class Agent extends Main {
         }
         return { _state: this.getState(), reward: this.score, terminated: this.done }
     }
+
+    drawFlame(x: number, y: number, flameHeight: number, baseWidth: number) {
+        this.p.push()
+        let r = this.p.random(255, 255); // Componente de cor vermelha variando entre 255
+        let g = this.p.random(100, 255); // Componente de cor laranja/ amarela variando
+        let b = this.p.random(0, 0); // Componente de cor azul variando
+        this.p.fill(r, g, b);
+
+        let dx1 = this.p.random(-2, 2);
+        let dy1 = this.p.random(-2, 2);
+        let dx2 = this.p.random(-2, 2);
+        let dy2 = this.p.random(-2, 2);
+        let dx3 = this.p.random(-2, 2);
+        let dy3 = this.p.random(-2, 2);
+        let dx4 = this.p.random(-2, 2);
+        let dy4 = this.p.random(-2, 2);
+
+        this.p.beginShape();
+
+        this.p.vertex(x + dx1, y + dy1);
+        this.p.vertex(x - baseWidth / 2 + dx2, y + flameHeight + dy2);
+        this.p.vertex(x + dx3, y + flameHeight * 0.8 + dy3);
+        this.p.vertex(x + baseWidth / 2 + dx4, y + flameHeight + dy4);
+        this.p.endShape(this.p.CLOSE);
+        this.p.pop()
+    }
+
+
+    private addSensors() {
+        this.sensors.forEach(sensor => this.sensorAlert(sensor));
+    }
+
+  private sensorAlert(sensor:Sendor){
+    
+  }
+
+ 
+
+  
+
+
+    private updateSensorPositions(numSensors: number, sensorOffset: number, angle: number, halfCircle: boolean = false) {
+        const angleRad = DEG2RAD * angle;
+        const sensorAngles = Array.from({ length: numSensors }, (_, index) => (index / numSensors) * (halfCircle ? 180 : 360));
+
+        const sensors = sensorAngles.map(sensorAngle => {
+            const sensorX = this.x + sensorOffset * Math.cos(angleRad - (DEG2RAD * sensorAngle));
+            const sensorY = this.y + sensorOffset * Math.sin(angleRad - (DEG2RAD * sensorAngle));
+            return { x: sensorX, y: sensorY };
+        });
+        return sensors;
+    }
+
+    action() {
+
+
+        if (this.model !== undefined) {
+
+            if (this.angle < -5 || this.angle > 5) {
+
+                const inputTensor = tf.tensor(this.angle).reshape([-1, 1]);
+                const prediction = this.model.angle?.predict(inputTensor) as tf.Tensor;
+                const action = (tf.argMax(prediction, 1) as any).arraySync()[0];
+                this.angleAction(action);
+
+            }
+            else if (this.agentY + 70 > this.targetY) {
+
+                const inputTensor = tf.tensor2d([[this.agentY, this.targetY]]);
+                const prediction = this.model.vertical?.predict(inputTensor) as tf.Tensor;
+                const action = (tf.argMax(prediction, 1) as any).arraySync()[0];
+                this.verticalAction(action)
+            }
+            else {
+
+
+                const inputTensor = tf.tensor2d([[this.targetX, this.agentX]]);
+                const prediction = this.model.horizontal?.predict(inputTensor) as tf.Tensor;
+                const action = (tf.argMax(prediction, 1) as any).arraySync()[0];
+                this.horizontalAction(action);
+
+            }
+        }
+
+    }
+
+    private angleAction(action: number) {
+
+        switch (action) {
+            case AngleAction.Nothing: break;
+            case AngleAction.LeftRotate: this.rotateLeft(); break;
+            case AngleAction.RightRotate: this.rotateRight(); break;
+        }
+    }
+    private horizontalAction(action: number) {
+
+        switch (action) {
+            case HorizontalAction.Left: this.goLeft(); break;
+            case HorizontalAction.Right: this.goRight(); break;
+        }
+    }
+    private verticalAction(action: number) {
+        console.log("VerticalAction", VerticalAction[action])
+        switch (action) {
+            case VerticalAction.Nothing: ; break;
+            case VerticalAction.TurnOnEnging: this.applyMainThruster(this.agentBody, 0.001); break;
+        }
+    }
+
 
     calculateReward(state: State, targetX: number, targety: number) {
         let reward = 0;
@@ -251,6 +382,37 @@ export default class Agent extends Main {
             reward += 1000;
         }
         return reward;
+    }
+
+    update() {
+
+        if (this.engineBurn) {
+            this.drawFlame(this.agentX, this.agentY + 10, 50, 20);
+        }
+        this.updateSensorPositions(4, 10, 9, true)
+
+        this.p.push();
+        this.p.stroke('red')
+        this.p.line(this.agentX, this.agentY, this.targetX, this.targetY);
+        this.p.pop();
+        // drawBody(this.p, this.agentBody);
+        drawBody(this.p, this.agentBody, this.img);
+        this.p.push();
+
+
+        this.p.push();
+        this.p.fill('white')
+
+
+
+        this.p.text(`Fuel ${this.percentFuel}% `, this.agentX + 10, this.agentY - 10)
+        this.p.text(`Distance ${this.distance} `, this.agentX + 10, this.agentY)
+        this.p.text(`Angle ${this.angle} `, this.agentX + 10, this.agentY + 10)
+        this.p.text(`Velocity ${this.speed} `, this.agentX + 10, this.agentY + 20)
+        this.p.pop();
+        this.engineBurn = false;
+        this.checkIsAlive();
+
     }
 
     // private beforeUpdate(callback: Function) {

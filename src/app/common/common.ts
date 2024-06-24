@@ -1,6 +1,8 @@
 import Matter, { Engine, Events, Body } from "matter-js";
 import p5 from "p5";
 
+
+export const DEG2RAD = Math.PI / 180;
 // Convert radians to degrees
 /**
 * @param {number} radians - The angle in radians to convert.
