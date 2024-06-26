@@ -82,6 +82,19 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
     return this._verticalDirection.getValue();
   }
 
+  /*
+   * VerticalDirection
+   */
+  private readonly _combined = new BehaviorSubject<tf.GraphModel<string | tf.io.IOHandler> | null>(null);
+  combined$ = this._combined.asObservable().pipe(distinctUntilChanged(), shareReplay({ bufferSize: 1, refCount: true }));
+
+  /*
+  * VerticalDirection getter
+  */
+  get combined(): tf.GraphModel<string | tf.io.IOHandler> | null {
+    return this._combined.getValue();
+  }
+
 
 
   ngAfterViewInit(): void {
@@ -89,8 +102,9 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
     tf.loadGraphModel('assets/models/tf/angle/web_model/model.json').then(model => this._modelAngle.next(model));
     tf.loadGraphModel('assets/models/tf/horizontal_direction_datas/web_model/model.json').then(model => this._horizontalDirection.next(model));
     tf.loadGraphModel('assets/models/tf/vertical_direction_datas/web_model/model.json').then(model => this._verticalDirection.next(model));
-    combineLatest([this.modelAngle$, this.horizontalDirection$, this.verticalDirection$]).pipe(tap(([modelAngle, horizontal, vertical]) => {
-      if (modelAngle && horizontal && vertical) {
+    tf.loadGraphModel('assets/models/tf/angle/web_model_combined_data/model.json').then(model => this._combined.next(model));
+    combineLatest([this.modelAngle$, this.horizontalDirection$, this.verticalDirection$, this.combined$]).pipe(tap(([modelAngle, horizontal, vertical, combined]) => {
+      if (modelAngle && horizontal && vertical && combined) {
 
         new p5(this.sketch.bind(this));
       }
@@ -130,7 +144,8 @@ export class StarShipLandingSuperVizedComponent extends Main implements AfterVie
     this.agent = new Agent(p, this.scenario, img, (window.innerWidth / 2), 100, {
       angle: this.modelAngle,
       horizontal: this.horizontalDirection,
-      vertical: this.verticalDirection
+      vertical: this.verticalDirection,
+      combined: this.combined
     });
     this.agent.setTargetPosition(this.scenario.landingPlatformX, this.scenario.landingPlatformY)
     this.Composite.add(this.engine.world, [this.agent.agentBody]);

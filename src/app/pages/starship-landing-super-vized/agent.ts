@@ -9,17 +9,18 @@ export enum SensorType {
     TunedOn = 1,
     TurnedOff = 0
 }
+
 export interface Sensor {
     x: number;
     y: number;
     sensorType?: SensorType
 }
 
-
 interface TrainnedModel {
     angle: tf.GraphModel<string | tf.io.IOHandler> | null;
     horizontal: tf.GraphModel<string | tf.io.IOHandler> | null;
     vertical: tf.GraphModel<string | tf.io.IOHandler> | null;
+    combined: tf.GraphModel<string | tf.io.IOHandler> | null;
 }
 
 interface State {
@@ -144,7 +145,7 @@ export default class Agent extends Main {
 
     private addStarship(): Matter.Body {
         return this.Bodies.rectangle(this.x / 2, this.y, 22, 25, {
-            angle: degreesToRadians(180),
+            angle: degreesToRadians(90),
             isStatic: false,
             collisionFilter: {
                 // category: this.category,
@@ -167,9 +168,55 @@ export default class Agent extends Main {
     }
 
     private goLeft() {
+        this.p.push();
+        this.p.stroke('white');
+
+        // Adjust these variables to control the spray effect
+        const sprayRadius = 20;
+        const numberOfLines = 50; // Increase this number for a denser spray
+        const angleVariation = 30; // Degrees of variation around the main line
+
+        for (let i = 0; i < numberOfLines; i++) {
+            // Generate random angles within the specified variation
+            const angleOffset = this.p.random(-angleVariation, angleVariation);
+            const radianOffset = this.p.radians(angleOffset);
+
+            // Calculate the end point of the line with some random length
+            const length = this.p.random(10, sprayRadius);
+            const endX = this.agentX + Math.cos(radianOffset) * length;
+            const endY = this.agentY + Math.sin(radianOffset) * length;
+
+            // Draw the line
+            this.p.line(this.agentX + 5, this.agentY, endX, endY);
+        }
+
+        this.p.pop();
         this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: -0.0001, y: 0 });
     }
     private goRight() {
+        this.p.push();
+        this.p.stroke('white');
+
+        // Adjust these variables to control the spray effect
+        const sprayRadius = 20;
+        const numberOfLines = 50; // Increase this number for a denser spray
+        const angleVariation = 30; // Degrees of variation around the main line
+
+        for (let i = 0; i < numberOfLines; i++) {
+            // Generate random angles within the specified variation
+            const angleOffset = this.p.random(-angleVariation, angleVariation);
+            const radianOffset = this.p.radians(angleOffset);
+
+            // Calculate the end point of the line with some random length
+            const length = this.p.random(10, sprayRadius);
+            const endX = this.agentX - Math.cos(radianOffset) * length;
+            const endY = this.agentY + Math.sin(radianOffset) * length;
+
+            // Draw the line
+            this.p.line(this.agentX - 5, this.agentY, endX, endY);
+        }
+
+        this.p.pop();
         this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: 0.0001, y: 0 });
     }
     resetEnvironment() {
@@ -205,21 +252,7 @@ export default class Agent extends Main {
 
 
         }
-        // switch (Action[action]) {
-        //     case Action[0]: break;//Nothing;
-        //     case Action[1]://LeftThrust
-        //         this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: -0.0001, y: 0 });
-        //         break;
-        //     case Action[2]://MainThrust
-        //         this.applyMainThruster(this.agentBody, 0.0005);
-        //         break;
-        //     case Action[3]://RightThrust
-        //         this.Body.applyForce(this.agentBody, { x: this.agentBody.position.x, y: this.agentBody.position.y }, { x: 0.0001, y: 0 });
-        //         break;
-        //     default:
-        //         // Nenhuma ação
-        //         break;
-        // }
+
     }
 
     private applyMainThruster(body: Matter.Body, forceMagnitude: number) {
@@ -288,7 +321,6 @@ export default class Agent extends Main {
 
     private sensorAlert(sensor: Sensor) {
 
-
         this.p.push()
         if (sensor.y > this.height) {
             this.p.fill('red');
@@ -317,17 +349,12 @@ export default class Agent extends Main {
     }
 
     action() {
-
-
         if (this.model !== undefined) {
-
             if (this.angle < -5 || this.angle > 5) {
-
                 const inputTensor = tf.tensor(this.angle).reshape([-1, 1]);
                 const prediction = this.model.angle?.predict(inputTensor) as tf.Tensor;
                 const action = (tf.argMax(prediction, 1) as any).arraySync()[0];
                 this.angleAction(action);
-
             }
             else if (this.agentY + 70 > this.targetY) {
 
@@ -337,13 +364,10 @@ export default class Agent extends Main {
                 this.verticalAction(action)
             }
             else {
-
-
                 const inputTensor = tf.tensor2d([[this.targetX, this.agentX]]);
                 const prediction = this.model.horizontal?.predict(inputTensor) as tf.Tensor;
                 const action = (tf.argMax(prediction, 1) as any).arraySync()[0];
                 this.horizontalAction(action);
-
             }
         }
 
@@ -395,14 +419,14 @@ export default class Agent extends Main {
         if (this.engineBurn) {
             this.drawFlame(this.agentX, this.agentY + 10, 50, 20);
         }
-        this.sensors.push(...
-            [
-                ...this.updateSensorPositions(1, 40, this.angle + 50, true),
-                ...this.updateSensorPositions(1, 40, this.angle + 90, true),
-                ...this.updateSensorPositions(1, 40, this.angle + 130, true),
-                // ...this.updateSensorPositions(1, 80, this.a, true),
-            ])
-        this.addSensors()
+        // this.sensors.push(...
+        //     [
+        //         ...this.updateSensorPositions(1, 40, this.angle + 50, true),
+        //         ...this.updateSensorPositions(1, 40, this.angle + 90, true),
+        //         ...this.updateSensorPositions(1, 40, this.angle + 130, true),
+        //         // ...this.updateSensorPositions(1, 80, this.a, true),
+        //     ])
+        // this.addSensors()
 
         this.p.push();
         this.p.stroke('red')
