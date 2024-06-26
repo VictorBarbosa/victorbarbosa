@@ -64,7 +64,7 @@ export default class Agent extends Main {
     private engineBurn = false
     readonly actionSpace = 4;
     readonly observationSpace = 7
-    sensors: Sensor[] = []
+    sensors!: Sensor[]
     public get percentFuel(): number {
         return parseFloat((this.fuel / this.maxFuel * 100).toFixed(2));
     }
@@ -137,9 +137,6 @@ export default class Agent extends Main {
         this.agentBody = this.addStarship();
     }
 
-
-
-
     setTargetPosition(landingPlatformX: number, landingPlatformY: number) {
         this.targetX = landingPlatformX;
         this.targetY = landingPlatformY;
@@ -147,8 +144,8 @@ export default class Agent extends Main {
 
     private addStarship(): Matter.Body {
         return this.Bodies.rectangle(this.x / 2, this.y, 22, 25, {
-            angle: degreesToRadians(0),
-            isStatic: true,
+            angle: degreesToRadians(180),
+            isStatic: false,
             collisionFilter: {
                 // category: this.category,
                 // mask: ~this.category,
@@ -289,22 +286,31 @@ export default class Agent extends Main {
         this.sensors.forEach(sensor => this.sensorAlert(sensor));
     }
 
-  private sensorAlert(sensor:Sendor){
-    
-  }
+    private sensorAlert(sensor: Sensor) {
 
- 
 
-  
+        this.p.push()
+        if (sensor.y > this.height) {
+            this.p.fill('red');
+            this.p.stroke('red');
+            this.p.circle(sensor.x, sensor.y, 3)
+        } else {
+            this.p.fill('white')
+            this.p.stroke('white');
+            this.p.circle(sensor.x, sensor.y, 3)
+        }
+        this.p.line(this.agentX, this.agentY, sensor.x, sensor.y);
+        this.p.pop()
 
+    }
 
     private updateSensorPositions(numSensors: number, sensorOffset: number, angle: number, halfCircle: boolean = false) {
         const angleRad = DEG2RAD * angle;
         const sensorAngles = Array.from({ length: numSensors }, (_, index) => (index / numSensors) * (halfCircle ? 180 : 360));
 
         const sensors = sensorAngles.map(sensorAngle => {
-            const sensorX = this.x + sensorOffset * Math.cos(angleRad - (DEG2RAD * sensorAngle));
-            const sensorY = this.y + sensorOffset * Math.sin(angleRad - (DEG2RAD * sensorAngle));
+            const sensorX = this.agentX + sensorOffset * Math.cos(angleRad - (DEG2RAD * sensorAngle));
+            const sensorY = this.agentY + sensorOffset * Math.sin(angleRad - (DEG2RAD * sensorAngle));
             return { x: sensorX, y: sensorY };
         });
         return sensors;
@@ -385,11 +391,18 @@ export default class Agent extends Main {
     }
 
     update() {
-
+        this.sensors = []
         if (this.engineBurn) {
             this.drawFlame(this.agentX, this.agentY + 10, 50, 20);
         }
-        this.updateSensorPositions(4, 10, 9, true)
+        this.sensors.push(...
+            [
+                ...this.updateSensorPositions(1, 40, this.angle + 50, true),
+                ...this.updateSensorPositions(1, 40, this.angle + 90, true),
+                ...this.updateSensorPositions(1, 40, this.angle + 130, true),
+                // ...this.updateSensorPositions(1, 80, this.a, true),
+            ])
+        this.addSensors()
 
         this.p.push();
         this.p.stroke('red')
@@ -405,10 +418,10 @@ export default class Agent extends Main {
 
 
 
-        this.p.text(`Fuel ${this.percentFuel}% `, this.agentX + 10, this.agentY - 10)
-        this.p.text(`Distance ${this.distance} `, this.agentX + 10, this.agentY)
-        this.p.text(`Angle ${this.angle} `, this.agentX + 10, this.agentY + 10)
-        this.p.text(`Velocity ${this.speed} `, this.agentX + 10, this.agentY + 20)
+        this.p.text(`Fuel ${this.percentFuel}% `, this.agentX + 10, this.agentY - 50)
+        this.p.text(`Distance ${this.distance} `, this.agentX + 10, this.agentY - 40)
+        this.p.text(`Angle ${this.angle} `, this.agentX + 10, this.agentY - 30)
+        this.p.text(`Velocity ${this.speed} `, this.agentX + 10, this.agentY - 20)
         this.p.pop();
         this.engineBurn = false;
         this.checkIsAlive();

@@ -44,3 +44,10 @@ Thumbs.db
 logs
 src/assets/data.pkl
 src/assets/logs
+src/assets/datas/angle_datas.pkl
+src/assets/models/angle/model_saved.h5
+src/assets/models/angle/model_saved.keras
+src/assets/models/angle/saved_model/fingerprint.pb
+src/assets/models/angle/saved_model/saved_model.pb
+src/assets/models/angle/saved_model/variables/variables.data-00000-of-00001
+src/assets/models/angle/saved_model/variables/variables.index
