@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="https://readme-typing-svg.demolab.com/?lines=Hi,+I'm+Victor+Barbosa;Welcome+to+my+GitHub!&center=true&width=380&height=45">
+  <img src="https://readme-typing-svg.demolab.com/?lines=Hi 👋, I'm Victor Barbosa;Welcome+to+my+GitHub!&center=true&width=380&height=45">
 </h1>
 
 <h3 align="center">Hello! I'm Victor Barbosa, a technology enthusiast and developer passionate about learning and sharing knowledge.</h3>
