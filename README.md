@@ -1,6 +1,7 @@
-<h1 align="center" style="transition: color 0.3s;" onmouseover="this.style.color='red'" onmouseout="this.style.color=''" >
-  Hi 👋, I'm Victor Barbosa
+<h1 align="center">
+  <img src="https://readme-typing-svg.demolab.com/?lines=Hi,+I'm+Victor+Barbosa;Welcome+to+my+GitHub!&center=true&width=380&height=45">
 </h1>
+
 <h3 align="center">Hello! I'm Victor Barbosa, a technology enthusiast and developer passionate about learning and sharing knowledge.</h3>
 
 <p align="left"> <img src="https://komarev.com/ghpvc/?username=victorbarbosa&label=Profile%20views&color=0e75b6&style=flat" alt="victorbarbosa" /> </p>
